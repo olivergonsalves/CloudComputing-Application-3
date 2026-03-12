@@ -1,213 +1,108 @@
 # Rabbit Hole
 
-Rabbit Hole is a local-first visual knowledge explorer that builds a strict hierarchical topic tree from any search term. You can expand/collapse branches, keep the full exploration path visible, and save/reopen complete maps locally.
+Rabbit Hole is a local-first visual knowledge explorer. It turns any searched topic into a clean, expanding hierarchical map so users can explore related concepts without losing context.
 
-## 1) Proposed Folder Structure
+## What It Does
+
+- Search a root topic and generate a structured knowledge tree.
+- Expand any node to reveal deeper child concepts.
+- Keep a stable top-down layout with readable edges.
+- Show selected-topic details in the sidebar:
+  - title
+  - summary
+  - source label
+  - external article link
+  - path from root to selected node
+- Save maps locally and reopen later from the same state.
+- Store local search history.
+- Open a Google search for the selected node from the sidebar.
+
+## Why It Exists
+
+Typical search workflows become tab-heavy and fragmented. Rabbit Hole keeps exploration structured and visible, so users can go deeper into a subject while preserving the full path they took.
+
+## High-Level Architecture
+
+- Frontend: React + TypeScript + Vite + Tailwind + React Flow
+- Backend: Node.js + Express + TypeScript
+- AI: Anthropic Claude Haiku (child topic generation)
+- Knowledge source: Wikipedia (summaries + canonical links)
+- Persistence: local JSON files (maps + search history)
+
+## Project Structure
 
 ```text
-rabbit-hole/
+final_project_App3/
   frontend/
-    src/
-      components/
-      features/
-        modals/
-        sidebar/
-        tree/
-      lib/
-      styles/
-      types/
-      App.tsx
-      main.tsx
-    index.html
-    package.json
-    tailwind.config.ts
-    vite.config.ts
   backend/
-    src/
-      clients/
-      config/
-      controllers/
-      middleware/
-      models/
-      routes/
-      services/
-      utils/
-      app.ts
-      server.ts
-    data/
-    package.json
-    tsconfig.json
   .env.example
   package.json
   README.md
 ```
 
-## 2) Data Model
+## Prerequisites
 
-`TreeNode`
-- `id: string`
-- `label: string`
-- `normalizedLabel: string`
-- `parentId: string | null`
-- `depth: number`
-- `children: string[]`
-- `isExpanded: boolean`
-- `hasLoadedChildren: boolean`
-- `source: { sourceLabel, confidence, discoveredBy[] }`
-- `summary: string`
-- `externalUrl: string`
-- `summaryIsFallback: boolean`
+- Node.js 20+ (Node 22 recommended)
+- npm 10+
 
-`TreeState`
-- `rootId: string`
-- `nodes: Record<string, TreeNode>`
-- `selectedNodeId: string | null`
+## Setup
 
-`SavedMap`
-- `id: string`
-- `rootTopic: string`
-- `createdAt: ISO timestamp`
-- `updatedAt: ISO timestamp`
-- `tree: TreeState`
+1. Clone the repo
 
-`SearchHistoryItem`
-- `id: string`
-- `topic: string`
-- `timestamp: ISO timestamp`
-
-## 3) Tree Layout Strategy (No Intersections Guarantee)
-
-The frontend uses a deterministic hierarchical layout algorithm (strict tree, not force graph):
-
-1. Compute each visible node width (`max(minWidth, labelLengthEstimate)`).
-2. Recursively compute subtree widths bottom-up:
-   - leaf width = node width
-   - internal width = `max(node width, sum(child subtree widths + sibling gaps))`
-3. Assign positions top-down:
-   - root centered
-   - each child group centered under parent
-   - siblings placed left-to-right by subtree width
-4. Render only visible descendants (`isExpanded` chain).
-5. Draw parent->child edges with React Flow `smoothstep` edges.
-
-Why this avoids crossings/overlap:
-- Stable sibling order + contiguous non-overlapping horizontal intervals per subtree.
-- Children always directly below parents, preserving left-to-right ancestor ordering.
-- Subtree-width allocation prevents node overlap.
-- No free-form physics or force layout randomness.
-
-## 4) API Contract
-
-### `POST /api/search`
-Request:
-```json
-{ "topic": "Artificial Intelligence" }
-```
-Response:
-```json
-{ "tree": { "rootId": "...", "nodes": {}, "selectedNodeId": "..." }, "warnings": [] }
+```bash
+git clone git@github.com:olivergonsalves/CloudComputing-Application-3.git
+cd CloudComputing-Application-3
 ```
 
-### `POST /api/expand`
-Request:
-```json
-{ "tree": { "rootId": "...", "nodes": {}, "selectedNodeId": "..." }, "nodeId": "..." }
-```
-Behavior:
-- If `hasLoadedChildren=true`: toggles collapse/expand only.
-- Else: fetches children, merges safely, marks node expanded.
+2. Create environment file
 
-Response:
-```json
-{ "tree": { "rootId": "...", "nodes": {}, "selectedNodeId": "..." }, "warnings": [] }
-```
-
-### `GET /api/topic-summary?topic=...`
-Response:
-```json
-{
-  "title": "...",
-  "summary": "...",
-  "externalUrl": "https://...",
-  "sourceLabel": "wikipedia|fallback",
-  "summaryIsFallback": false
-}
-```
-
-### `GET /api/maps`
-Response:
-```json
-{ "maps": [ { "id": "...", "rootTopic": "...", "createdAt": "...", "updatedAt": "...", "tree": {} } ] }
-```
-
-### `POST /api/maps`
-Request:
-```json
-{ "rootTopic": "Artificial Intelligence", "tree": { "rootId": "...", "nodes": {}, "selectedNodeId": "..." } }
-```
-Response:
-```json
-{ "map": { "id": "...", "rootTopic": "...", "createdAt": "...", "updatedAt": "...", "tree": {} } }
-```
-
-### `GET /api/history`
-Response:
-```json
-{ "history": [ { "id": "...", "topic": "...", "timestamp": "..." } ] }
-```
-
----
-
-## Implementation Notes
-
-- Frontend: React + TypeScript + Vite + Tailwind + React Flow.
-- Backend: Node + Express + TypeScript.
-- Persistence: local JSON files in `backend/data` (`maps.json`, `history.json`).
-- Integrations:
-  - Wikipedia API: summary + canonical link.
-  - Anthropic Haiku: strict JSON child-topic refinement (4-6 children).
-- External responses are schema-validated where applicable (`zod`).
-- Fallback behavior:
-  - Anthropic failure -> Wikipedia search-only candidates.
-  - Wikipedia summary failure -> fallback summary + search URL.
-
-## Local Setup
-
-1. Copy env file:
 ```bash
 cp .env.example .env
 ```
 
-2. Fill keys in `.env`:
-- `ANTHROPIC_API_KEY`
+3. Configure `.env`
 
-3. Install dependencies:
+```env
+PORT=4000
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+WIKIPEDIA_API_BASE=https://en.wikipedia.org/w/api.php
+DATA_DIR=./backend/data
+VITE_API_BASE_URL=http://localhost:4000
+```
+
+4. Install dependencies
+
 ```bash
 npm install
 ```
 
-4. Run frontend + backend together:
+## Run Locally
+
 ```bash
 npm run dev
 ```
 
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:5173` (or next available Vite port)
 - Backend: `http://localhost:4000`
 
-## Useful Scripts
+## Build
 
 ```bash
-npm run dev
 npm run build
-npm run start
 ```
 
-## Stability Guarantees Implemented
+## Helpful Endpoints
 
-- Strict hierarchical tree layout (not graph physics).
-- Unique stable node IDs (UUID).
-- Duplicate child prevention under parent.
-- Global normalized-label dedupe to prevent displayed cycles.
-- Deterministic expand/collapse without deleting loaded descendants.
-- Safe branch merge without corrupting unrelated branches.
-- Loading/error states for search and branch expansion.
+- Health: `GET /api/health`
+- Search: `POST /api/search`
+- Expand node: `POST /api/expand`
+- Topic summary: `GET /api/topic-summary?topic=...`
+- Saved maps: `GET /api/maps`, `POST /api/maps`
+- Search history: `GET /api/history`
+- Anthropic test: `GET /api/test-anthropic?topic=Cloud%20Computing`
+
+## Notes
+
+- This app is local-first; no cloud deployment is required.
+- Do not commit real secrets. Keep API keys only in `.env`.
