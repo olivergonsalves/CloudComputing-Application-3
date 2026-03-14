@@ -127,8 +127,8 @@ export function buildFlowElements(tree: TreeState): { nodes: Node[]; edges: Edge
         target: childId,
         type: "smoothstep",
         animated: false,
-        style: { stroke: "#68d5ff", strokeWidth: 1.4 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#68d5ff" }
+        style: { stroke: "#3b3b3b", strokeWidth: 1.2 },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: "#3b3b3b" }
       });
     }
   }

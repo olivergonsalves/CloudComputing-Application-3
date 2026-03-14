@@ -6,14 +6,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        surface: "#0a1220",
-        panel: "#0f1b2e",
-        ink: "#e6eef8",
-        accent: "#30b7ff",
-        accent2: "#4fffb3"
+        surface: "#0f0f0f",
+        panel: "#1a1a1a",
+        panel2: "#161616",
+        ink: "#ececec",
+        muted: "#a7a7a7",
+        accent: "#d7d7d7",
+        accent2: "#7d7d7d"
       },
       boxShadow: {
-        soft: "0 12px 30px rgba(8, 20, 40, 0.35)"
+        soft: "0 16px 40px rgba(0, 0, 0, 0.35)"
       },
       keyframes: {
         reveal: {
@@ -22,7 +24,7 @@ export default {
         }
       },
       animation: {
-        reveal: "reveal 260ms ease-out"
+        reveal: "reveal 220ms ease-out"
       }
     }
   },

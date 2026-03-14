@@ -10,7 +10,7 @@ import {
   ReactFlowProvider
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { BookOpen, Clock3, Save, Search } from "lucide-react";
+import { BookOpen, Clock3, Compass, Save, Search } from "lucide-react";
 import { DetailsSidebar } from "./features/sidebar/DetailsSidebar";
 import { OverlayModal } from "./features/modals/OverlayModal";
 import { TopicNodeView } from "./features/tree/TopicNode";
@@ -166,12 +166,30 @@ function RabbitHoleApp() {
     (mapTree: TreeState) => {
       setTree(mapTree);
       setMapsModalOpen(false);
+      setWarnings([]);
+      setError(null);
       requestAnimationFrame(() => {
         flow?.fitView({ duration: 300, padding: 0.2 });
       });
     },
     [flow]
   );
+
+  const onResetApp = useCallback(() => {
+    searchAbortRef.current?.abort();
+    expandAbortRef.current?.abort();
+    latestSearchRequestRef.current += 1;
+    latestExpandRequestRef.current += 1;
+
+    setQuery("");
+    setTree(null);
+    setWarnings([]);
+    setError(null);
+    setIsSearching(false);
+    setLoadingNodeId(null);
+    setMapsModalOpen(false);
+    setHistoryModalOpen(false);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -181,49 +199,68 @@ function RabbitHoleApp() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-surface text-ink">
-      <DetailsSidebar tree={tree} selectedNodeId={tree?.selectedNodeId ?? null} loading={isSearching || !!loadingNodeId} warnings={warnings} />
+    <div className="h-screen bg-surface text-ink">
+      <header className="border-b border-[#2a2a2a] bg-[#111111] px-4 py-3">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center gap-3">
+          <button
+            type="button"
+            onClick={onResetApp}
+            className="group inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] px-4 py-2 text-sm font-semibold text-white transition hover:border-[#4a4a4a] hover:bg-[#202020]"
+          >
+            <Compass size={16} className="text-[#dbdbdb] transition group-hover:rotate-45" />
+            <span className="whitespace-nowrap">Rabbit Hole Explorer</span>
+          </button>
 
-      <main className="relative flex-1 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 z-10 mx-auto mt-4 w-[95%] rounded-xl border border-slate-600/70 bg-[#0b1422]/90 p-3 shadow-soft backdrop-blur">
-          <form onSubmit={onSearch} className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-[280px] flex-1 items-center gap-2 rounded-lg border border-slate-600 px-3 py-2">
+          <form onSubmit={onSearch} className="mx-auto flex w-full max-w-3xl items-center gap-2">
+            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-2xl border border-[#2a2a2a] bg-[#1a1a1a] px-4 py-2.5 transition focus-within:border-[#474747]">
               <Search size={16} className="text-slate-300" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search any topic..."
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-400"
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#828282]"
               />
             </div>
             <button
               disabled={isSearching}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-[#031422] transition hover:bg-cyan-300 disabled:opacity-50"
+              className="rounded-xl border border-[#3b3b3b] bg-[#2a2a2a] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#575757] hover:bg-[#313131] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSearching ? "Generating..." : "Explore"}
             </button>
+          </form>
+
+          <div className="hidden shrink-0 items-center gap-2 md:flex">
             <button type="button" onClick={onSaveMap} className="rounded-lg border border-slate-500 px-3 py-2 text-sm text-slate-200">
               <Save size={14} className="mr-1 inline" /> Save map
             </button>
-            <button type="button" onClick={openMaps} className="rounded-lg border border-slate-500 px-3 py-2 text-sm text-slate-200">
+            <button type="button" onClick={openMaps} className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-sm text-slate-200 transition hover:border-[#505050] hover:bg-[#222]">
               <BookOpen size={14} className="mr-1 inline" /> Saved maps
             </button>
-            <button type="button" onClick={openHistory} className="rounded-lg border border-slate-500 px-3 py-2 text-sm text-slate-200">
+            <button type="button" onClick={openHistory} className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-sm text-slate-200 transition hover:border-[#505050] hover:bg-[#222]">
               <Clock3 size={14} className="mr-1 inline" /> History
             </button>
             <button
               type="button"
               onClick={() => flow?.fitView({ duration: 250, padding: 0.2 })}
-              className="rounded-lg border border-slate-500 px-3 py-2 text-sm text-slate-200"
+              className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-sm text-slate-200 transition hover:border-[#505050] hover:bg-[#222]"
             >
               Fit to screen
             </button>
-          </form>
-
-          {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
+          </div>
         </div>
+      </header>
 
-        <div className="h-full w-full bg-[radial-gradient(circle_at_top,#17365f_0%,#0a1220_50%,#060b14_100%)] pt-24">
+      <div className="flex h-[calc(100vh-74px)] flex-col lg:flex-row">
+        <DetailsSidebar tree={tree} selectedNodeId={tree?.selectedNodeId ?? null} loading={isSearching || !!loadingNodeId} warnings={warnings} />
+
+        <main className="relative flex-1 overflow-hidden">
+          {error ? (
+            <p className="absolute left-4 right-4 top-4 z-20 rounded-lg border border-[#4a2020] bg-[#271616] p-2 text-xs text-red-200">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="h-full w-full bg-[radial-gradient(circle_at_top,#191919_0%,#121212_55%,#0f0f0f_100%)] transition-colors">
           <ReactFlow
             nodes={elements.nodes}
             edges={elements.edges}
@@ -235,12 +272,13 @@ function RabbitHoleApp() {
             maxZoom={1.7}
             proOptions={{ hideAttribution: true }}
           >
-            <MiniMap pannable zoomable className="!bg-[#0b1422]" nodeColor="#30b7ff" />
+            <MiniMap pannable zoomable className="!bg-[#161616] !border !border-[#2a2a2a]" nodeColor="#6d6d6d" />
             <Controls />
-            <Background color="#22395a" gap={24} />
+            <Background color="#252525" gap={28} />
           </ReactFlow>
         </div>
-      </main>
+        </main>
+      </div>
 
       <OverlayModal open={mapsModalOpen} onClose={() => setMapsModalOpen(false)} title="Saved Maps">
         <div className="max-h-[70vh] space-y-2 overflow-y-auto">
@@ -248,7 +286,7 @@ function RabbitHoleApp() {
             <button
               key={entry.id}
               onClick={() => loadSavedMap(entry.tree)}
-              className="flex w-full items-center justify-between rounded border border-slate-700 bg-[#111d31] p-3 text-left text-sm text-slate-200"
+              className="flex w-full items-center justify-between rounded-xl border border-[#2a2a2a] bg-[#161616] p-3 text-left text-sm text-slate-200 transition hover:border-[#474747] hover:bg-[#1d1d1d]"
             >
               <span>{entry.rootTopic}</span>
               <span className="text-xs text-slate-400">{new Date(entry.createdAt).toLocaleString()}</span>
@@ -267,7 +305,7 @@ function RabbitHoleApp() {
                 setQuery(entry.topic);
                 setHistoryModalOpen(false);
               }}
-              className="flex w-full items-center justify-between rounded border border-slate-700 bg-[#111d31] p-3 text-left text-sm text-slate-200"
+              className="flex w-full items-center justify-between rounded-xl border border-[#2a2a2a] bg-[#161616] p-3 text-left text-sm text-slate-200 transition hover:border-[#474747] hover:bg-[#1d1d1d]"
             >
               <span>{entry.topic}</span>
               <span className="text-xs text-slate-400">{new Date(entry.timestamp).toLocaleString()}</span>
